@@ -2,6 +2,8 @@
 */
 
 //#include <stdlib.h>
+#include <fcntl.h>
+#include <errno.h>
 #include <math.h>
 #include <cairo/cairo.h>
 #include "audioclip.hpp"
@@ -9,8 +11,31 @@
 
 const float ZOOM_SPEED = 0.02f;
 
-AudioClip::AudioClip (cairo_t* cr, int x, int y, int w, int h):
-	Widget(cairo_t* cr, int x, int y, int w, int h)
+AudioClip::AudioClip (int x, int y, int w, int h):
+	Widget(x, y, w, h)
+{
+	reinitZoom();
+}
+
+AudioClip::AudioClip(int x, int y, int w, int h, std::string fileName):
+	Widget(x, y, w, h)
+{
+	loadFile(fileName);
+}
+
+AudioClip::~AudioClip ()
+{
+}
+
+void AudioClip::reinitZoom()
+{
+	xpress_ = 0;
+	ypress_ = 0;
+	left = 0;
+	right = data_.size();
+}
+
+void AudioClip::testWave()
 {
 	data_.resize(44100,1,0);
 	float freq = 13;
@@ -24,14 +49,10 @@ AudioClip::AudioClip (cairo_t* cr, int x, int y, int w, int h):
 		y += sin(7*x)/7;
 		data_[i] = y;
 	}
-	left = 0;
-	right = data_.size();
-	xpress_ = 0;
-	ypress_ = 0;
+	reinitZoom();
 }
 
-AudioClip::AudioClip(cairo_t* cr, int x, int y, int w, int h, std::string fileName):
-	Widget(cairo_t* cr, int x, int y, int w, int h)
+void AudioClip::loadFile(std::string fileName)
 {
 	stk::FileWvIn wavfile = stk::FileWvIn(fileName);
 	unsigned int s = 1;
@@ -40,37 +61,47 @@ AudioClip::AudioClip(cairo_t* cr, int x, int y, int w, int h, std::string fileNa
 	}
 	data_ = stk::StkFrames(s, wavfile.channelsOut());
 	wavfile.tick(data_);
-	left = 0;
-	right = data_.size();
-	xpress_ = 0;
-	ypress_ = 0;
-	fprintf(stderr, "loaded %s size %u\n", fileName.c_str(), data_.size());
+	imgfn_ = "." + fileName + ".png";
+	int fd = open(imgfn_.c_str(), O_CREAT | O_WRONLY | O_EXCL, S_IRUSR | S_IWUSR);
+	if (fd < 0) {
+	  if (errno == EEXIST) {
+	  }
+	} else {
+		cacheImage ();
+	}
+	fprintf(stderr, "loaded %s size %lu\n", fileName.c_str(), data_.size());
+	reinitZoom();
 }
 
-AudioClip::~AudioClip ()
+void AudioClip::cacheImage ()
 {
+    cairo_surface_t *surface;
+    cairo_t *cr;
+    int imw = data_.size() / 1000;
+    int imh = 200;
+
+    surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, imw, imh);
+    cr = cairo_create (surface);
+
+	drawData(cr, 0, 0, imw);
+
+    cairo_surface_write_to_png (surface, imgfn_.c_str());
+    cairo_destroy (cr);
+    cairo_surface_destroy (surface);
 }
 
-void
-AudioClip::draw()
+void AudioClip::drawData(cairo_t* cr, int ox, int oy, int imw)
 {
-	int ww = right - left;
-	const float bottom = (float)(y_ + h_);
-	const float xscale = (float)ww / w_;
+	const float bottom = (float)(oy + h_);
+	const float xscale = (float)(right-left) / imw;
 	const float yscale = h_/2;
-	//fprintf(stderr, "xscale %f\n", xscale);
-	cairo_set_source_rgb (cr_, 0.2, 0.2, 0.2);
-	cairo_rectangle (cr_, x_, y_, w_, h_);
-	cairo_fill_preserve (cr_);
-	cairo_set_line_width (cr_, 1);
-	cairo_set_source_rgb (cr_, 0.4, 0.4, 0.4);
-	cairo_stroke (cr_);
-	cairo_set_source_rgb (cr_, 1.0, 0.7, 0.0);
+	ORANGE;
+	cairo_set_line_width (cr, 1);
 	float value = data_[left];
-	cairo_move_to (cr_, x_, bottom - (value+1) * yscale);
+	cairo_move_to (cr, ox, bottom - (value+1) * yscale);
 	int width = int(xscale/2);
-	if (xscale > 3)
-		for (int i=1; i<w_; i++) {
+	if (xscale > 500)
+		for (int i=1; i<imw; i++) {
 			unsigned int j = (unsigned int)(i * xscale) + left;
 			float min = 1.0, max = -1.0;
 			for (unsigned int k=j-width; k<=j+width; k++)
@@ -78,17 +109,31 @@ AudioClip::draw()
 					min = fmin(min, data_[k]);
 					max = fmax(max, data_[k]);
 				}
-			cairo_line_to (cr_, x_ + i, bottom - (max+1) * yscale);
-			cairo_line_to (cr_, x_ + i, bottom - (min+1) * yscale);
+			cairo_line_to (cr, ox + i, bottom - (max+1) * yscale);
+			cairo_line_to (cr, ox + i, bottom - (min+1) * yscale);
 		}
 	else {
-		for (int i=1; i<w_; i++) {
+		for (int i=1; i<imw; i++) {
 			unsigned int j = (unsigned int)(i * xscale) + left;
-			cairo_line_to (cr_, x_ + i, bottom - (data_[j]+1) * yscale);
+			cairo_line_to (cr, ox + i, bottom - (data_[j]+1) * yscale);
 		}
 	}
-	cairo_stroke (cr_);
+	cairo_stroke (cr);
 }
+
+void AudioClip::draw(cairo_t* cr)
+{
+	COLOR_WBG;
+	cairo_rectangle (cr, x_, y_, w_, h_);
+	cairo_fill_preserve (cr);
+	cairo_set_line_width (cr, 1);
+	COLOR_BOR;
+	cairo_stroke (cr);
+	drawData(cr, x_, y_, w_);
+}
+
+
+
 
 void
 AudioClip::press(unsigned int ox, unsigned int oy)
