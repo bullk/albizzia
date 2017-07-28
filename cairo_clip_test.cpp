@@ -39,14 +39,21 @@ class Item : public Widget
 {
 public:
 	Item (int x, int y, int w, int h, std::string s, command c) :
-		Widget(x, y, w, h), highlight_(false), str_(s), command_(c)
-	{}
-	~Item () {}
-	void draw(cairo_t* cr)
+		Widget(x, y, w, h), str_(s)
 	{
-		fprintf(stderr, "highlight %d\n", highlight_);
-		if (highlight_) COLOR_BOR;
-		else COLOR_WBG;
+		fprintf(stderr, "creating Item %s\n", s.c_str());
+		str_ = s;
+		command_ = c;
+	}
+	~Item () {}
+	virtual void draw(cairo_t* cr)
+	{
+		if (mouse_over_) {
+			fprintf(stderr, "highlight %d\n", mouse_over_);
+			COLOR_BOR;
+		}
+		else 
+			COLOR_WBG;
 		cairo_rectangle (cr, x_, y_, w_, h_);
 		cairo_fill_preserve (cr);
 		COLOR_BOR;
@@ -54,13 +61,13 @@ public:
 		cairo_stroke (cr);
 		textDraw(cr, x_+7, y_+h_-7, str_.c_str());
 	}
-	void highlight(double x, double y)
+	virtual void highlight(double x, double y)
 	{
-		highlight_ = touches(x, y);
-		fprintf(stderr, "item highlight %d\n", highlight_);
+		mouse_over_ = touches(x, y);
+		if (mouse_over_)
+			fprintf(stderr, "Item %s highlight %d\n", str_.c_str(), mouse_over_);
 	}
 protected:
-	bool highlight_;
 	std::string str_;
 	command command_;
 };
@@ -79,7 +86,10 @@ public:
 	~Selector () {}
 	void draw(cairo_t* cr)
 	{
-		COLOR_WBG;
+		//fprintf(stderr, "highlight %d\n", mouse_over_);
+		//if (mouse_over_) COLOR_BOR;
+		//else
+			COLOR_WBG;
 		cairo_rectangle (cr, x_, y_, w_, h_);
 		cairo_fill_preserve (cr);
 		COLOR_BOR;
@@ -102,7 +112,8 @@ public:
 	void highlight (double x, double y)
 	{
 		//fprintf(stderr, "panel highlight\n");
-		if (touches(x, y))
+		mouse_over_ = touches(x, y);
+		if (mouse_over_)
 			for (Item i : items_)
 				i.highlight(x, y);
 	}

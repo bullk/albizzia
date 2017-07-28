@@ -69,7 +69,7 @@ void AudioClip::loadFile(std::string fileName)
 	} else {
 		cacheImage ();
 	}
-	fprintf(stderr, "loaded %s size %lu\n", fileName.c_str(), data_.size());
+	fprintf(stderr, "loaded %s size %u\n", fileName.c_str(), data_.size());
 	reinitZoom();
 }
 
@@ -138,7 +138,7 @@ void AudioClip::draw(cairo_t* cr)
 void
 AudioClip::press(unsigned int ox, unsigned int oy)
 {
-	ui_state_ = true;
+	mouse_pressed_ = true;
 	xpress_ = ox;
 	ypress_ = oy;
 }

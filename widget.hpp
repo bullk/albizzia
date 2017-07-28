@@ -19,7 +19,8 @@ class Widget
 {
 public:
 	Widget(int x, int y, int w, int h):
-		x_(x), y_(y), w_(w), h_(h), ui_state_(false)
+		x_(x), y_(y), w_(w), h_(h),
+		mouse_pressed_(false), mouse_over_(false)
 	{
 		fprintf(stderr, "creating widget %d %d, %d %d \n", x_, y_, w_, h_);
 	}
@@ -30,12 +31,17 @@ public:
 	{
 		return (x >= x_ && x <= x_ + w_ && y >= y_ && y <= y_ + h_);
 	}
-	bool pressed () { return ui_state_; }
-	virtual void press (unsigned int, unsigned int) { ui_state_ = true; }
-	virtual void release () { ui_state_ = false; }
+	bool pressed () { return mouse_pressed_; }
+	virtual void press (unsigned int, unsigned int) { mouse_pressed_ = true; }
+	virtual void release () { mouse_pressed_ = false; }
+	virtual void highlight(double x, double y)
+	{
+		mouse_over_ = touches(x, y);
+	}
 protected:
 	int x_, y_, w_, h_;
-	bool ui_state_;
+	bool mouse_pressed_;
+	bool mouse_over_;
 };
 
 
