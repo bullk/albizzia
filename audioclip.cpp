@@ -14,7 +14,8 @@ const float ZOOM_SPEED = 0.02f;
 AudioClip::AudioClip (int x, int y, int w, int h):
 	Widget(x, y, w, h)
 {
-	reinitZoom();
+	//reinitZoom();
+	testWave();
 }
 
 AudioClip::AudioClip(int x, int y, int w, int h, std::string fileName):
@@ -59,8 +60,8 @@ void AudioClip::loadFile(std::string fileName)
 	if (wavfile.channelsOut() > 0) {
 		s = wavfile.getSize();
 	}
-	data_ = stk::StkFrames(s, wavfile.channelsOut());
-	wavfile.tick(data_);
+	data_ = stk::StkFrames (s, wavfile.channelsOut());
+	wavfile.tick (data_);
 	imgfn_ = "." + fileName + ".png";
 	int fd = open(imgfn_.c_str(), O_CREAT | O_WRONLY | O_EXCL, S_IRUSR | S_IWUSR);
 	if (fd < 0) {
@@ -69,7 +70,7 @@ void AudioClip::loadFile(std::string fileName)
 	} else {
 		cacheImage ();
 	}
-	fprintf(stderr, "loaded %s size %u\n", fileName.c_str(), data_.size());
+	fprintf(stderr, "loaded %s size %lu\n", fileName.c_str(), data_.size());
 	reinitZoom();
 }
 
@@ -100,7 +101,7 @@ void AudioClip::drawData(cairo_t* cr, int ox, int oy, int imw)
 	float value = data_[left];
 	cairo_move_to (cr, ox, bottom - (value+1) * yscale);
 	int width = int(xscale/2);
-	if (xscale > 500)
+	if (xscale > 10)
 		for (int i=1; i<imw; i++) {
 			unsigned int j = (unsigned int)(i * xscale) + left;
 			float min = 1.0, max = -1.0;
@@ -131,9 +132,6 @@ void AudioClip::draw(cairo_t* cr)
 	cairo_stroke (cr);
 	drawData(cr, x_, y_, w_);
 }
-
-
-
 
 void
 AudioClip::press(unsigned int ox, unsigned int oy)

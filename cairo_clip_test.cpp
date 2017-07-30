@@ -39,34 +39,34 @@ class Item : public Widget
 {
 public:
 	Item (int x, int y, int w, int h, std::string s, command c) :
-		Widget(x, y, w, h), str_(s)
+		Widget (x, y, w, h)
 	{
 		fprintf(stderr, "creating Item %s\n", s.c_str());
-		str_ = s;
+		str_ = std::string(s);
 		command_ = c;
 	}
 	~Item () {}
-	virtual void draw(cairo_t* cr)
+	void draw(cairo_t* cr)
 	{
-		if (mouse_over_) {
-			fprintf(stderr, "highlight %d\n", mouse_over_);
-			COLOR_BOR;
-		}
-		else 
-			COLOR_WBG;
+		if (mouse_over_) COLOR_BOR;
+		else COLOR_WBG;
 		cairo_rectangle (cr, x_, y_, w_, h_);
 		cairo_fill_preserve (cr);
 		COLOR_BOR;
 		cairo_set_line_width (cr, 1);
 		cairo_stroke (cr);
-		textDraw(cr, x_+7, y_+h_-7, str_.c_str());
+		textDraw (cr, x_+7, y_+h_-7, str_.c_str());
 	}
-	virtual void highlight(double x, double y)
+	void highlight (double x, double y)
 	{
-		mouse_over_ = touches(x, y);
-		if (mouse_over_)
-			fprintf(stderr, "Item %s highlight %d\n", str_.c_str(), mouse_over_);
+		mouse_over_ = touches (x, y);
 	}
+	//bool isHovered() { return mouse_over_; }
+	void execute()
+	{
+		command_(str_);
+	}
+	
 protected:
 	std::string str_;
 	command command_;
@@ -83,7 +83,11 @@ public:
 		Widget(x, y, w, h)
 	{
 	}
-	~Selector () {}
+	~Selector ()
+	{
+		while (items_.size() > 0)
+			items_.pop_back();
+	}
 	void draw(cairo_t* cr)
 	{
 		//fprintf(stderr, "highlight %d\n", mouse_over_);
@@ -95,8 +99,8 @@ public:
 		COLOR_BOR;
 		cairo_set_line_width (cr, 1);
 		cairo_stroke (cr);
-		for (Item i : items_)
-			i.draw(cr);
+		for (Item* i : items_)
+			i->draw(cr);
 	}
 	void addItem (std::string s, command c)
 	{
@@ -107,24 +111,31 @@ public:
 			fname = s.substr(found+1);
 		else fname = s;
 		fprintf(stderr, "Adding item %s at pos %lu\n", fname.c_str(), i);
-		items_.push_back(Item(x_, i*24 + y_, w_, 24, fname, c));
+		items_.push_back(new Item(x_, i*24 + y_, w_, 24, fname, c));
 	}
 	void highlight (double x, double y)
 	{
 		//fprintf(stderr, "panel highlight\n");
 		mouse_over_ = touches(x, y);
 		if (mouse_over_)
-			for (Item i : items_)
-				i.highlight(x, y);
+			for (Item* i : items_)
+				i->highlight(x, y);
+	}
+	void choose (double x, double y)
+	{
+		for (Item* i : items_)
+			if (i->touches(x, y))
+				i->execute();
 	}
 
 protected:
-	std::vector<Item> items_;
+	std::vector<Item*> items_;
 };
 
 
-static Selector panel = Selector(620, 10, 200, 200);
-static AudioClip clip = AudioClip(10, 10, 600, 200, "JoDassMix.20161105.wav");
+Selector panel = Selector(620, 10, 200, 200);
+AudioClip clip = AudioClip(10, 10, 600, 200);
+//static AudioClip clip = AudioClip(10, 10, 600, 200, "JoDassMix.20161105.wav");
 static std::vector<std::string> audiofiles_;
 
 int scanAudioFilesCallback( const char *fpath, const struct stat *sb, int typeflag )
@@ -146,9 +157,7 @@ int scanAudioFiles ()
 	return 0;
 }
 
-
-static void
-onDisplay(PuglView* view)
+static void onDisplay(PuglView* view)
 {
 	cairo_t* cr = (cairo_t*)puglGetContext(view);
 
@@ -164,8 +173,7 @@ onDisplay(PuglView* view)
 	clip.draw(cr);
 }
 
-static void
-onClose(PuglView* view)
+static void onClose(PuglView* view)
 {
 	quit = 1;
 }
@@ -192,6 +200,8 @@ static void onEvent(PuglView* view, const PuglEvent* event)
 		if (clip.touches(event->button.x, event->button.y)) {
 			clip.press(event->button.x, event->button.y);
 		}
+		if (panel.touches(event->button.x, event->button.y))
+			panel.choose(event->button.x, event->button.y);
 		break;
 	case PUGL_BUTTON_RELEASE:
 		clip.release();
