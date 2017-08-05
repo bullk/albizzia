@@ -1,5 +1,6 @@
 *.wav
 *.o
-*.png
+*.wav.png
 my_pugl_cairo_test
 cairo_clip_test
+splash-bullk
