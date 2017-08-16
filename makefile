@@ -12,8 +12,9 @@ cairo_clip_test: audioclip.o cairo_clip_test.o
 splash-bullk: splash-bullk.cpp
 	g++ -std=c++0x -Wall -O1 -D__LITTLE_ENDIAN__ -I. -I/usr/local/include/pugl-0 -o splash-bullk splash-bullk.cpp -lm -lpugl-0 -lGL -lcairo
 
-jack-clock: jack-clock.cpp
-	g++ -std=c++0x -Wall -O1 -D__LITTLE_ENDIAN__ -I. -I/usr/local/include/pugl-0 -o jack-clock jack-clock.cpp -lpugl-0 -lcairo -ljack
+jack-clock: jack-clock.cpp Clock.o
+#	g++ -std=c++0x -Wall -O1 -D__LITTLE_ENDIAN__ -I. -o jack-clock jack-clock.cpp pugl/pugl_x11.c Clock.o -lcairo -ljack -lpthread
+	g++ -std=c++0x -Wall -O1 -D__LITTLE_ENDIAN__ -I. -I/usr/local/include/pugl-0 -o jack-clock jack-clock.cpp Clock.o -lpugl-0 -lcairo -ljack -lpthread
 
 audioclip.o: audioclip.hpp widget.hpp
 cairo_clip_test.o: audioclip.hpp
