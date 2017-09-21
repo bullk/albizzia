@@ -1,7 +1,10 @@
 SUFFIXES = .cpp .o
 .SUFFIXES: $(SUFFIXES) .
 
-all: splash-bullk my_pugl_cairo_test cairo_clip_test jack-clock
+all: splash-bullk my_pugl_cairo_test cairo_clip_test jack-clock jack-client
+
+jack-client: jack-client.cpp
+	g++ -std=c++0x -Wall -O1 -o jack-client jack-client.cpp -ljack -lpthread
 
 my_pugl_cairo_test: my_pugl_cairo_test.c
 	gcc -Wall -O1 -I/usr/local/include/pugl-0 -o my_pugl_cairo_test my_pugl_cairo_test.c -lm -lpugl-0 -lGL -lcairo
